@@ -1,0 +1,98 @@
+import numpy as np
+!pip install pulp
+!pip install gurobipy
+import pulp as pl
+from pulp import *
+import gurobipy
+from gurobipy import GRB
+from pulp import LpStatus, LpMaximize, GUROBI, GUROBI_CMD
+
+TYPE_OF_PRODUCTS_Y = 13  # кол-во типов товара
+COSTS_OF_TRANSITION_R = 40  # издержки перехода
+TIME_OF_PRODUCTION_S = 17  # время производства
+
+M = np.random.randint(20, 90, TYPE_OF_PRODUCTS_Y)  # кол-во каждого вида товара, m(i)
+P = np.random.randint(15, 30, TYPE_OF_PRODUCTS_Y)  # скорость производства p(i)
+C = np.random.randint(400, 700, TYPE_OF_PRODUCTS_Y)  # стоимость продукции c(i)
+
+def main():
+    """Function to solve the primary task."""
+
+    x = dict()
+    constraint_1 = list()
+    obj_func = list()
+
+    # создали задачу максимизации ЛП
+    task = pl.LpProblem(name='Distribution_Problem', sense=pl.LpMaximize)
+
+    # заполним словарь x нашими "проблемными" переменными,т.е. определяем LpVariable для хранения переменных ЦФ
+    # из ниху уже формируем первое линейное ограничение: сумма всех наших x с коэфф-ми времени (M/P = t)
+    for i in range(TYPE_OF_PRODUCTS_Y):
+        elem = pl.LpVariable(cat=pl.LpBinary, name="x" + str(i))
+        x[i] = elem
+        constraint_1.append(((M[i] / P[i]) * elem))
+        obj_func.append((C[i] - COSTS_OF_TRANSITION_R) * elem + COSTS_OF_TRANSITION_R)
+    # добавляем получившееся линейное ограничение 
+    task.addConstraint(
+        pl.LpConstraint(e=pl.lpSum(constraint_1), sense=pl.LpConstraintLE, rhs=TIME_OF_PRODUCTION_S))
+    # задали целевую функцию с учетом издержек перехода
+    task.setObjective(pl.lpSum(obj_func) + COSTS_OF_TRANSITION_R)
+    # получаем решение задачи через Gurobi
+
+    pl.get_solver("GUROBI", msg=False)
+    task.solve()
+    # значимые\незначимые ограничения
+    for j in task.variables():
+        print(j.name, "=", j.varValue)
+
+    print("Status: ", task.sol_status," or ", LpStatus[task.solve()])
+    print("\nAll information about task: \n", task.to_json)
+    print("Answer by method \"Gurobi\": ", pl.value(task.objective))
+
+    # print(task)
+    # print("Линейное ограничение: ", pulp.lpSum(constraint_1))
+    # print("Целевая функция: ", pulp.lpSum(obj_func) + COSTS_OF_TRANSITION_R)
+
+main()
+
+x0 = 1.0
+x1 = 1.0
+x10 = 1.0
+x11 = 1.0
+x12 = 0.0
+x2 = 0.0
+x3 = 0.0
+x4 = 1.0
+x5 = 1.0
+x6 = 1.0
+x7 = 1.0
+x8 = 1.0
+x9 = 1.0
+Status:  1  or  Optimal
+
+All information about task: 
+ <bound method LpProblem.toJson of Distribution_Problem:
+MAXIMIZE
+647*x0 + 655*x1 + 438*x10 + 542*x11 + 439*x12 + 445*x2 + 380*x3 + 610*x4 + 476*x5 + 555*x6 + 485*x7 + 595*x8 + 643*x9 + 560
+SUBJECT TO
+_C1: 0.857142857143 x0 + 3.27777777778 x1 + 1.34615384615 x10
+ + 1.21052631579 x11 + 4.06666666667 x12 + 3.4347826087 x2 + 3.63636363636 x3
+ + 0.8 x4 + 2.24 x5 + 1.58823529412 x6 + 2.37931034483 x7 + 0.909090909091 x8
+ + 1.55555555556 x9 <= 17
+
+VARIABLES
+0 <= x0 <= 1 Integer
+0 <= x1 <= 1 Integer
+0 <= x10 <= 1 Integer
+0 <= x11 <= 1 Integer
+0 <= x12 <= 1 Integer
+0 <= x2 <= 1 Integer
+0 <= x3 <= 1 Integer
+0 <= x4 <= 1 Integer
+0 <= x5 <= 1 Integer
+0 <= x6 <= 1 Integer
+0 <= x7 <= 1 Integer
+0 <= x8 <= 1 Integer
+0 <= x9 <= 1 Integer
+>
+Answer by method "Gurobi":  6206.0
